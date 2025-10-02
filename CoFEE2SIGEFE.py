@@ -32,7 +32,7 @@ def read_CoFFEE_beneficiarios(input_dir):
         df = pd.read_excel(filepath,header=2)
 
         for i,row in df[['Código Actuación','Nombre Destinatario','NIF Destinatario normalizado','Tipo documento','Tipo Operación','Naturaleza calculada Destinatario','Importe Destinatarios sin IVA','Importe total Destinatarios']].iterrows():
-            hash_beneficiarios[row[0]] = list(row[1:])
+            hash_beneficiarios[row[0]] = list(map(str,list(row[1:])))
         
     return hash_beneficiarios
 
@@ -59,7 +59,7 @@ def read_CoFFEE_operaciones(input_file):
     hash_operaciones = {}
 
     for i,row in df[['Código iniciativa','Tipo actuación','URL licitación']].iterrows():
-        hash_operaciones[row[0]] = list(row[1:])
+        hash_operaciones[row[0]] = list(map(str,list(row[1:])))
 
     return hash_operaciones
 
@@ -88,7 +88,7 @@ def main():
     #if not os.path.exists(output_dir):
         #raise IOError('El directorio donde se va a escribir el excel de salida no existe: %s' % (output_dir))
 
-    #hash_beneficiarios = read_CoFFEE_beneficiarios(input_dir)
+    hash_beneficiarios = read_CoFFEE_beneficiarios(input_dir)
 
     input_proyectos = args.proyectos
 
@@ -97,7 +97,18 @@ def main():
 
     hash_proyectos = read_CoFFEE_proyectos(input_proyectos)
 
-    print(hash_proyectos)
+    num_matches = 0
+    num_total = 0
+
+    for id_act in hash_beneficiarios.keys():
+
+        l_ = hash_beneficiarios[id_act] + [hash_proyectos.get(id_act,"")]
+
+        print("\t".join(l_))
+        
+
+        
+            
 
     
 if __name__ == '__main__':
