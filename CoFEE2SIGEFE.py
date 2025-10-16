@@ -31,7 +31,7 @@ def read_CoFFEE_beneficiarios(input_dir):
     si no hay ficheros Excel informa de ello y los problemas puntuales a la hora
     de leer cada archivo quedan capturados.
     """
-    l_fields = ['Tipo Operación','Código único IJ','Código Actuación','Código Contrato','Denominación IJ/Operaciones','Nombre Destinatario','NIF Destinatario normalizado','Rol Destinatario','Naturaleza calculada Destinatario','Tipo Contrato','Importe Destinatarios sin IVA','Importe total Destinatarios']
+    #l_fields = ['Tipo Operación','Código único IJ','Código Actuación','Código Contrato','Denominación IJ/Operaciones','Nombre Destinatario','NIF Destinatario normalizado','Rol Destinatario','Naturaleza calculada Destinatario','Tipo Contrato','Importe Destinatarios sin IVA','Importe total Destinatarios']
 
     files = [f for f in os.listdir(input_dir) if f.lower().endswith('.xlsx')]
     
@@ -47,18 +47,24 @@ def read_CoFFEE_beneficiarios(input_dir):
 
         df = pd.read_excel(filepath,header=2)
 
-        for i,row in df[l_fields].iterrows():
+        l_col = list(df.columns)
+
+        for i,row in df.iterrows():
 
             l_row = list(map(str,list(row)))
             l_row = [elem if elem != 'nan' else '' for elem in l_row]
 
-            tipo_op = row[0]
+            hash_row = dict(zip(l_col,l_row))
+
+            tipo_op    = hash_row['Tipo Operación']
+            cod_ij     = hash_row['Código único IJ']
+            cod_coffee = hash_row['Código Actuación']
 
             hash_IJ2beneficiarios.setdefault(tipo_op,{})
             hash_IJ2proyecto.setdefault(tipo_op,{})
 
-            hash_IJ2beneficiarios[tipo_op][row[1]] = dict(zip(l_fields,l_row))
-            hash_IJ2proyecto[tipo_op][row[1]] = row[2]
+            hash_IJ2beneficiarios[tipo_op][cod_ij] = hash_row
+            hash_IJ2proyecto[tipo_op][cod_ij] = cod_coffee
             
         
     return hash_IJ2beneficiarios,hash_IJ2proyecto
@@ -67,19 +73,25 @@ def read_CoFFEE_beneficiarios(input_dir):
 
 def read_CoFFEE_proyectos(input_file):
 
-    l_fields = ['Código Iniciativa','Estado Iniciativa','Denominación Iniciativa','Fecha Fin','CCAA','Provincia','Importe IJ/Operaciones sin IVA','Importe total IJ/Operaciones','Importe Destinatarios sin IVA','Importe total Destinatarios']
+    #l_fields = ['Código Iniciativa','Estado Iniciativa','Denominación Iniciativa','Fecha Fin','CCAA','Provincia','Importe IJ/Operaciones sin IVA','Importe total IJ/Operaciones','Importe Destinatarios sin IVA','Importe total Destinatarios']
 
     df = pd.read_excel(input_file, header=2)
 
     hash_proyectos = {}
 
-    for i,row in df[l_fields].iterrows():
+    l_col = list(df.columns)
+
+    for i,row in df.iterrows():
 
         l_row = list(map(str,list(row)))
         l_row = [elem if elem != 'nan' else '' for elem in l_row]
 
-        hash_proyectos[row[0]] = dict(zip(l_fields,list(map(str,l_row))))
-        hash_proyectos[row[1]] = dict(zip(l_fields,list(map(str,l_row))))
+        hash_row = dict(zip(l_col,list(map(str,l_row))))
+
+        cod_coffee = hash_row['Código Iniciativa']
+
+        hash_proyectos[cod_coffee] = hash_row
+        #hash_proyectos[row[1]] = hash_row
 
     return hash_proyectos
 
@@ -87,18 +99,24 @@ def read_CoFFEE_proyectos(input_file):
 
 def read_CoFFEE_operaciones(input_file):
 
-    l_fields = ['Código único IJ/Operaciones','Código contrato','Código operación','Código IJ/Operaciones','Código iniciativa','URL licitación','URL concesión','Aplicación presupuestaria','Código órgano contratación','Código BDNS','Denominación IJ/Operaciones','Fecha publicación','Fecha formalización','Tipo contrato','Importe IJ/Operaciones sin IVA','Importe total IJ/Operaciones','Observaciones']
+    #l_fields = ['Código único IJ/Operaciones','Código contrato','Código operación','Código IJ/Operaciones','Código iniciativa','URL licitación','URL concesión','Aplicación presupuestaria','Código órgano contratación','Código BDNS','Denominación IJ/Operaciones','Fecha publicación','Fecha formalización','Tipo contrato','Importe IJ/Operaciones sin IVA','Importe total IJ/Operaciones','Observaciones']
 
     df = pd.read_excel(input_file, header=2)
+
+    l_col = list(df.columns)
     
     hash_operaciones = {}
 
-    for i,row in df[l_fields].iterrows():
+    for i,row in df.iterrows():
 
         l_row = list(map(str,list(row)))
         l_row = [elem if elem != 'nan' else '' for elem in l_row]
 
-        hash_operaciones[row[0]]= dict(zip(l_fields,l_row))
+        hash_row = dict(zip(l_col,l_row))
+
+        cod_ij = hash_row['Código único IJ/Operaciones']
+
+        hash_operaciones[cod_ij] = hash_row
 
     return hash_operaciones
 
@@ -119,7 +137,7 @@ def get_cols_subvenciones():
     hash_col2fields = OrderedDict([('CODIGO_ACTUACION (PROYECTO O SUBPROYECTO)','Código iniciativa'),
     ('NOMBRE ACTUACION','Denominación IJ/Operaciones'),
     ('CODIGO_BDNS','Código BDNS'),
-    ('URL_BDNS','URL concesión/licitación'),
+    ('URL_BDNS','URL concesión'),
     ('IMPORTE_SIN_IVA','Importe IJ/Operaciones sin IVA'),
     ('IMPORTE_INTEGRO','Importe total IJ/Operaciones'),
     ('OBSERVACIONES','Observaciones')])
@@ -135,7 +153,6 @@ def get_cols_beneficiarios_subvenciones():
     ('BENEFICIARIO','Nombre Destinatario'),
     ('IMPORTE_SIN_IVA','Importe Destinatarios sin IVA'),
     ('IMPORTE_INTEGRO','Importe total Destinatarios'),
-    ('Fecha formalización','Fecha formalización'),
     ('PROVINCIA','Provincia'),
     ('CCAA','CCAA'),
     ('Estado','Estado Iniciativa'),
@@ -154,11 +171,7 @@ def get_cols_contratos():
     ('COD_CONTRATO','Código contrato'),
     ('URL_CONTRATO','URL concesión'),
     ('DENOMINACION','Denominación IJ/Operaciones'),
-    ('FECHA_PUBLICACION','Fecha publicación'),
-    ('FECHA_FIN_PRESENTACION_OFERTAS','Fecha Fin'),
     ('FECHA_FORMALIZACION','Fecha formalización'),
-    ('APLICACION_PRESUPUESTARIA','Aplicación presupuestaria'),
-    ('IMPORTE_SIN_IVA (LIC)','N/D'),
     ('IMPORTE_SIN_IVA','Importe IJ/Operaciones sin IVA'),
     ('IMPORTE_INTEGRO','Importe total IJ/Operaciones'),
     ('OBSERVACIONES','Observaciones')])
@@ -217,7 +230,7 @@ def get_cols_beneficiarios_convenios():
 
     return hash_col2fields
 
-
+"""
 def get_cols_aportaciones_dinearias():
 
     hash_col2fields = OrderedDict([('CODIGO ACTUACION (PROYECTO O SUBPROYECTO)','Código Actuación'),
@@ -234,6 +247,39 @@ def get_cols_aportaciones_dinearias():
     ('CCAA','CCAA'),
     ('PROVINCIA','Provincia'),
     ('Perceptor final (SI/NO)','Preguntar si se deduce')])
+
+    return hash_col2fields
+"""
+
+def get_cols_encargo():
+
+    hash_col2fields = OrderedDict([('CODIGO_ACTUACION (PROYECTO O SUBPROYECTO)','Código iniciativa'),
+    ('NOMBRE ACTUACION','Denominación Iniciativa'),
+    ('CODIGO_ENCARGO','Código IJ/Operaciones'),
+    ('DENOMINACIÓN','Denominación IJ/Operaciones'),
+    ('FECHA_FORMALIZACION','Fecha formalización'),
+    ('CODIGO_BDNS','Código BDNS'),
+    ('IMPORTE_SIN_IVA','Importe IJ/Operaciones sin IVA'),
+    ('IMPORTE_INTEGRO','Importe total IJ/Operaciones'),
+    ('PROVINCIA','Provincia'),
+    ('CCAA','CCAA'),
+    ('OBSERVACIONES','Observaciones')])
+
+    return hash_col2fields
+
+def get_cols_beneficiarios_encargo():
+
+    hash_col2fields = OrderedDict([('CODIGO_ACTUACION (PROYECTO O SUBPROYECTO)','Código Actuación'),
+    ('NOMBRE ACTUACION','Denominación Iniciativa'),
+    ('NIF','NIF Destinatario normalizado'),
+    ('BENEFICIARIO','Nombre Destinatario'),
+    ('IMPORTE_SIN_IVA','Importe Destinatarios sin IVA'),
+    ('IMPORTE_INTEGRO','Importe total Destinatarios'),
+    ('PROVINCIA','Provincia'),
+    ('CCAA','CCAA'),
+    ('Clase de Beneficiario (Privado/Publico)','Naturaleza calculada Destinatario'),
+    ('Perceptor final (SI/NO)','Destino Subproyecto'),
+    ('OBSERVACIONES','Observaciones')])
 
     return hash_col2fields
 
@@ -411,14 +457,19 @@ def main(logger):
         hash_IJ2beneficiario_flat.update(hash_IJ2beneficiario[cod_op])
         hash_IJ2proyecto_flat.update(hash_IJ2proyecto[cod_op])
 
-    hash_df['TABLA MAESTRA']               = crea_tabla_maestra(get_cols_tabla_maestra(),hash_IJ2beneficiario_flat,hash_IJ2proyecto_flat,hash_proyectos)
-    hash_df['SUBVENCIONES']                = crea_tabla_IJ(get_cols_subvenciones(),hash_IJ2proyecto['Subvención'],hash_IJ2operaciones,hash_proyectos)
-    hash_df['BENEFICIARIOS_SUBVENCIONES']  = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_subvenciones(),hash_IJ2beneficiario['Subvención'],hash_IJ2proyecto['Subvención'],hash_proyectos,BDNS=hash_BDNS)
-    hash_df['CONTRATOS']                   = crea_tabla_IJ(get_cols_contratos(),hash_IJ2proyecto['Contrato'],hash_IJ2operaciones,hash_proyectos)
-    hash_df['BENEFICIARIOS_CONTRATOS']     = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_contratos(),hash_IJ2beneficiario['Contrato'],hash_IJ2proyecto['Contrato'],hash_proyectos)
-    hash_df['CONVENIOS']                   = crea_tabla_IJ(get_cols_convenios(),hash_IJ2proyecto['Convenio'],hash_IJ2operaciones,hash_proyectos)
-    hash_df['BENEFICIARIOS_CONVENIOS']     = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_convenios(),hash_IJ2beneficiario['Convenio'],hash_IJ2proyecto['Convenio'],hash_proyectos)
-    #hash_df['APORTACIONES_DINERARIAS']     = crea_tabla(get_cols_aportaciones_dinearias(),hash_IJ2beneficiario[''],hash_IJ2proyecto[''],hash_operaciones,hash_proyectos)
+    #hash_df['TABLA MAESTRA']               = crea_tabla_maestra(get_cols_tabla_maestra(),hash_IJ2beneficiario_flat,hash_IJ2proyecto_flat,hash_proyectos)
+    #hash_df['SUBVENCIONES']                = crea_tabla_IJ(get_cols_subvenciones(),hash_IJ2proyecto['Subvención'],hash_IJ2operaciones,hash_proyectos)
+    #hash_df['BENEFICIARIOS_SUBVENCIONES']  = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_subvenciones(),hash_IJ2beneficiario['Subvención'],hash_IJ2proyecto['Subvención'],hash_proyectos,BDNS=hash_BDNS)
+    #hash_df['CONTRATOS']                   = crea_tabla_IJ(get_cols_contratos(),hash_IJ2proyecto['Contrato'],hash_IJ2operaciones,hash_proyectos)
+    #hash_df['BENEFICIARIOS_CONTRATOS']     = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_contratos(),hash_IJ2beneficiario['Contrato'],hash_IJ2proyecto['Contrato'],hash_proyectos)
+    #hash_df['CONVENIOS']                   = crea_tabla_IJ(get_cols_convenios(),hash_IJ2proyecto['Convenio'],hash_IJ2operaciones,hash_proyectos)
+    #hash_df['BENEFICIARIOS_CONVENIOS']     = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_convenios(),hash_IJ2beneficiario['Convenio'],hash_IJ2proyecto['Convenio'],hash_proyectos)
+    #hash_df['ENCARGOS']                    = crea_tabla_IJ(get_cols_encargo(),hash_IJ2proyecto['Encargo a medio propio'],hash_IJ2operaciones,hash_proyectos)
+    #hash_df['BENEFICIARIOS_ENCARGOS']      = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_encargo(),hash_IJ2beneficiario['Encargo a medio propio'],hash_IJ2proyecto['Encargo a medio propio'],hash_proyectos)
+    hash_df['OTROS'] = crea_tabla_IJ(get_cols_encargo(),hash_IJ2proyecto['Otros – Especificar'],hash_IJ2operaciones,hash_proyectos)
+    hash_df['BENEFICIARIOS_OTROS']      = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_encargo(),hash_IJ2beneficiario['Otros – Especificar'],hash_IJ2proyecto['Otros – Especificar'],hash_proyectos)
+    
+    #hash_df['APORTACIONES_DINERARIAS']    = crea_tabla(get_cols_aportaciones_dinearias(),hash_IJ2beneficiario[''],hash_IJ2proyecto[''],hash_operaciones,hash_proyectos)
 
     with pd.ExcelWriter(output_file) as writer:  
         for nombre_hoja in hash_df.keys():

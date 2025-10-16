@@ -10,9 +10,17 @@
             "name": "Python Debugger: Current File with Arguments",
             "type": "debugpy",
             "request": "launch",
-            "program": "${file}",
+            "program": "${workspaceFolder}/CoFEE2SIGEFE.py",
             "console": "integratedTerminal",
             "args": ["-i","C:\\Users\\angela.delpozo\\beneficiarios_prueba\\destinatarios","--proyectos",r"C:\\Users\\angela.delpozo\\beneficiarios_prueba\\Desembolsos - Listado Total - Relación de Proyectos, Subproyectos, Subproyectos Instrumentales y Actuaciones.xlsx","--operaciones","C:\\Users\\angela.delpozo\\beneficiarios_prueba\\Desembolsos - IJOperaciones.xlsx","-o","C:\\Users\\angela.delpozo\\beneficiarios_prueba\\salida.xlsx"]
+        },
+        {
+            "name": "Python Debugger: Current File with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/parsea_BDNS.py",
+            "console": "integratedTerminal",
+            "args": ["-i","C:\\Users\\angela.delpozo\\beneficiarios_prueba\\BDNS","--ij","C:\\Users\\angela.delpozo\\beneficiarios_prueba\\Desembolsos - IJOperaciones.xlsx","--b","C:\\Users\\angela.delpozo\\beneficiarios_prueba\\destinatarios","-o","C:\\Users\\angela.delpozo\\beneficiarios_prueba\\BDNS_procesado.xlsx"]
         }
     ]
 }
