@@ -78,6 +78,7 @@ def read_CoFFEE_proyectos(input_file):
     df = pd.read_excel(input_file, header=2)
 
     hash_proyectos = {}
+    hash_id2provisional = {}
 
     l_col = list(df.columns)
 
@@ -89,11 +90,12 @@ def read_CoFFEE_proyectos(input_file):
         hash_row = dict(zip(l_col,list(map(str,l_row))))
 
         cod_coffee = hash_row['Código Iniciativa']
+        cod_coffee_prov = hash_row['Código provisional iniciativa']
 
+        hash_id2provisional[cod_coffee] = cod_coffee_prov
         hash_proyectos[cod_coffee] = hash_row
-        #hash_proyectos[row[1]] = hash_row
 
-    return hash_proyectos
+    return hash_id2provisional,hash_proyectos
 
 #######################################################
 
@@ -122,6 +124,36 @@ def read_CoFFEE_operaciones(input_file):
 
 #######################################################
 
+def formatea_numero(valor):
+
+    valor_n = float(valor)
+
+    return format(valor_n, ",.2f")
+
+def formatea_perceptor_final(valor):
+
+    valor_n = ""
+
+    if valor == "N":
+        valor_n = "SI"
+    elif valor == "S":
+        valor_n = "NO"
+
+    return valor_n
+
+def formatea_subcontratista(valor):
+
+    valor_n = ""
+
+    if valor == "Contratista adjudicatario":
+        valor_n = "NO"
+    elif valor == "Subcontratista":
+        valor_n = "SI"
+
+    return valor_n
+
+#######################################################
+
 def get_cols_tabla_maestra():
 
     hash_col2fields = OrderedDict([('NIF','NIF Destinatario normalizado'),
@@ -134,7 +166,7 @@ def get_cols_tabla_maestra():
 
 def get_cols_subvenciones():
 
-    hash_col2fields = OrderedDict([('CODIGO_ACTUACION (PROYECTO O SUBPROYECTO)','Código iniciativa'),
+    hash_col2fields = OrderedDict([('CODIGO_ACTUACION (PROYECTO O SUBPROYECTO)','Código Iniciativa'),
     ('NOMBRE ACTUACION','Denominación IJ/Operaciones'),
     ('CODIGO_BDNS','Código BDNS'),
     ('URL_BDNS','URL concesión'),
@@ -146,7 +178,7 @@ def get_cols_subvenciones():
 
 def get_cols_beneficiarios_subvenciones():
 
-    hash_col2fields = OrderedDict([('CODIGO_ACTUACION (PROYECTO O SUBPROYECTO)','Código Actuación'),
+    hash_col2fields = OrderedDict([('CODIGO_ACTUACION (PROYECTO O SUBPROYECTO)','Código Iniciativa'),
     ('NOMBRE ACTUACIÓN','Denominación IJ/Operaciones'),
     ('CODIGO_BDNS','Código BDNS'),
     ('NIF','NIF Destinatario normalizado'),
@@ -157,19 +189,19 @@ def get_cols_beneficiarios_subvenciones():
     ('CCAA','CCAA'),
     ('Estado','Estado Iniciativa'),
     ('Clase de Beneficiario (Privado/Publico)','Naturaleza calculada Destinatario'),
+    ('Perceptor final (SI/NO)','Destino Subproyecto'), # requiere regla
     ('OBSERVACIÓN','Observaciones')])
 
     return hash_col2fields
 
 def get_cols_contratos():
 
-    hash_col2fields = OrderedDict([('CODIGO_ACTUACION (PROYECTO O SUBPROYECTO)','Código iniciativa'),
+    hash_col2fields = OrderedDict([('CODIGO_ACTUACION (PROYECTO O SUBPROYECTO)','Código Iniciativa'),
     ('NOMBRE ACTUACION','Denominación IJ/Operaciones'),
     ('TIPO CONTRATO','Tipo contrato'),
     ('COD_ORGANO (SOLO PLACSP)','Código órgano contratación'),
     ('COD_LICITACION (SOLO PLACSP)','URL licitación'),
     ('COD_CONTRATO','Código contrato'),
-    ('URL_CONTRATO','URL concesión'),
     ('DENOMINACION','Denominación IJ/Operaciones'),
     ('FECHA_FORMALIZACION','Fecha formalización'),
     ('IMPORTE_SIN_IVA','Importe IJ/Operaciones sin IVA'),
@@ -180,32 +212,31 @@ def get_cols_contratos():
 
 def get_cols_beneficiarios_contratos():
 
-    hash_col2fields = OrderedDict([('CODIGO_ACTUACION (PROYECTO O SUBPROYECTO)','Código Actuación'),
+    hash_col2fields = OrderedDict([('CODIGO_ACTUACION (PROYECTO O SUBPROYECTO)','Código Iniciativa'),
     ('NOMBRE ACTUACION','Denominación Iniciativa'),
-    ('COD_CONTRATO','Código contrato'),
+    ('COD_CONTRATO','Código IJ/Operaciones'),
     ('NIF','NIF Destinatario normalizado'),
     ('BENEFICIARIO','Nombre Destinatario'),
-    ('ES_SUBCONTRATISTA (SI/NO)','Rol Destinatario'),
+    ('ES_SUBCONTRATISTA (SI/NO)','Rol Destinatario'), # requiere regla
     ('IMPORTE_SIN_IVA','Importe Destinatarios sin IVA'),
     ('IMPORTE_INTEGRO (ADJ)','Importe total Destinatarios'),
     ('PROVINCIA','Provincia'),
     ('CCAA','CCAA'),
     ('ENLACE','URL concesión'),
     ('ESTADO','Estado Iniciativa'),
-    ('Clase de Beneficiario (Privado/Publico)','Naturaleza calculada Destinatario'),
-    ('Perceptor final (N=SI, S=NO)','Destino Subproyecto'),
+    ('Clase de Beneficiario (Privado/Publico)','Naturaleza calculada Destinatario'), 
+    ('Perceptor final (SI/NO)','Destino Subproyecto'), # requiere regla
     ('OBSERVACIONES','Observaciones')])
 
     return hash_col2fields
 
 def get_cols_convenios():
 
-    hash_col2fields = OrderedDict([('CODIGO_ACTUACION (PROYECTO O SUBPROYECTO)','Código iniciativa'),
+    hash_col2fields = OrderedDict([('CODIGO_ACTUACION (PROYECTO O SUBPROYECTO)','Código Iniciativa'),
     ('NOMBRE ACTUACION','Denominación Iniciativa'),
     ('CODIGO_CONVENIO','Código IJ/Operaciones'),
     ('DENOMINACIÓN','Denominación IJ/Operaciones'),
     ('FECHA_FORMALIZACION','Fecha formalización'),
-    ('ENLACE','URL concesión'),
     ('IMPORTE_SIN_IVA','Importe IJ/Operaciones sin IVA'),
     ('IMPORTE_INTEGRO','Importe total IJ/Operaciones'),
     ('PROVINCIA','Provincia'),
@@ -216,8 +247,9 @@ def get_cols_convenios():
 
 def get_cols_beneficiarios_convenios():
 
-    hash_col2fields = OrderedDict([('CODIGO_ACTUACION (PROYECTO O SUBPROYECTO)','Código Actuación'),
+    hash_col2fields = OrderedDict([('CODIGO_ACTUACION (PROYECTO O SUBPROYECTO)','Código Iniciativa'),
     ('NOMBRE ACTUACION','Denominación Iniciativa'),
+    ('COD_CONVENIO','Código IJ/Operaciones'),
     ('NIF','NIF Destinatario normalizado'),
     ('BENEFICIARIO','Nombre Destinatario'),
     ('IMPORTE_SIN_IVA','Importe Destinatarios sin IVA'),
@@ -225,40 +257,18 @@ def get_cols_beneficiarios_convenios():
     ('PROVINCIA','Provincia'),
     ('CCAA','CCAA'),
     ('Clase de Beneficiario (Privado/Publico)','Naturaleza calculada Destinatario'),
-    ('Perceptor final (SI/NO)','Destino Subproyecto'),
+    ('Perceptor final (SI/NO)','Destino Subproyecto'), # requiere regla
     ('OBSERVACIONES','Observaciones')])
 
     return hash_col2fields
 
-"""
-def get_cols_aportaciones_dinearias():
-
-    hash_col2fields = OrderedDict([('CODIGO ACTUACION (PROYECTO O SUBPROYECTO)','Código Actuación'),
-    ('NOMBRE ACTUACION','Denominación Iniciativa'),
-    ('CODIGO_APORTACION_DINERARIA','Código IJ/Operaciones'),
-    ('DENOMINACIÓN','Denominación IJ/Operaciones'),
-    ('FECHA_FORMALIZACION','Fecha formalización'),
-    ('NIF','NIF Destinatario'),
-    ('BENEFICIARIO','Nombre Destinatario'),
-    ('OBSERVACIONES','Observaciones'),
-    ('ENLACE','URL concesión'),
-    ('IMPORTE_SIN_IVA','Importe IJ/Operaciones sin IVA'),
-    ('IMPORTE_INTEGRO','Importe total IJ/Operaciones'),
-    ('CCAA','CCAA'),
-    ('PROVINCIA','Provincia'),
-    ('Perceptor final (SI/NO)','Preguntar si se deduce')])
-
-    return hash_col2fields
-"""
-
 def get_cols_encargo():
 
-    hash_col2fields = OrderedDict([('CODIGO_ACTUACION (PROYECTO O SUBPROYECTO)','Código iniciativa'),
+    hash_col2fields = OrderedDict([('CODIGO_ACTUACION (PROYECTO O SUBPROYECTO)','Código Iniciativa'),
     ('NOMBRE ACTUACION','Denominación Iniciativa'),
     ('CODIGO_ENCARGO','Código IJ/Operaciones'),
     ('DENOMINACIÓN','Denominación IJ/Operaciones'),
     ('FECHA_FORMALIZACION','Fecha formalización'),
-    ('CODIGO_BDNS','Código BDNS'),
     ('IMPORTE_SIN_IVA','Importe IJ/Operaciones sin IVA'),
     ('IMPORTE_INTEGRO','Importe total IJ/Operaciones'),
     ('PROVINCIA','Provincia'),
@@ -269,8 +279,9 @@ def get_cols_encargo():
 
 def get_cols_beneficiarios_encargo():
 
-    hash_col2fields = OrderedDict([('CODIGO_ACTUACION (PROYECTO O SUBPROYECTO)','Código Actuación'),
+    hash_col2fields = OrderedDict([('CODIGO_ACTUACION (PROYECTO O SUBPROYECTO)','Código Iniciativa'),
     ('NOMBRE ACTUACION','Denominación Iniciativa'),
+    ('CODIGO_ENCARGO','Código IJ/Operaciones'),
     ('NIF','NIF Destinatario normalizado'),
     ('BENEFICIARIO','Nombre Destinatario'),
     ('IMPORTE_SIN_IVA','Importe Destinatarios sin IVA'),
@@ -278,7 +289,7 @@ def get_cols_beneficiarios_encargo():
     ('PROVINCIA','Provincia'),
     ('CCAA','CCAA'),
     ('Clase de Beneficiario (Privado/Publico)','Naturaleza calculada Destinatario'),
-    ('Perceptor final (SI/NO)','Destino Subproyecto'),
+    ('Perceptor final (SI/NO)','Destino Subproyecto'), # requiere regla
     ('OBSERVACIONES','Observaciones')])
 
     return hash_col2fields
@@ -312,18 +323,20 @@ def crea_tabla_maestra(hash_col2fields,hash_IJ2beneficiario,hash_IJ2proyecto,has
 
             field = hash_col2fields[col]
 
-            if field in hash_benf:
-                l_row.append(hash_benf[field])
-            elif field in hash_proy:
-                l_row.append(hash_proy[field])
+            if field in hash_proy:
+                value = hash_proy[field]
+            elif field in hash_benf:
+                value = hash_benf[field]
             else:
-                l_row.append('')
+                value = ''
+
+            l_row.append(value)
 
         df.loc[len(df)] = l_row
 
     return df.sort_values(by=['NIF'])
 
-def crea_tabla_beneficiarios_IJ(hash_col2fields,hash_IJ2beneficiario,hash_IJ2proyecto,hash_proyectos,**kwargs):
+def crea_tabla_beneficiarios_IJ(hash_col2fields,hash_IJ2beneficiario,hash_IJ2proyecto,hash_id2provisional,hash_proyectos,**kwargs):
 
     hash_bdns = {}
 
@@ -338,6 +351,8 @@ def crea_tabla_beneficiarios_IJ(hash_col2fields,hash_IJ2beneficiario,hash_IJ2pro
         
         id_act = hash_IJ2proyecto[id_ij]
 
+        id_act_prov = hash_id2provisional[id_act]
+        
         hash_proy = hash_proyectos.get(id_act,{})
 
         l_row = []
@@ -350,18 +365,29 @@ def crea_tabla_beneficiarios_IJ(hash_col2fields,hash_IJ2beneficiario,hash_IJ2pro
 
             field = hash_col2fields[col]
             
-            if field in hash_benf:
-                l_row.append(hash_benf[field])
+            if field == "Código Iniciativa":
+                valor = id_act_prov
+            elif field in hash_benf:
+                valor = hash_benf[field]
             elif field in hash_proy:
-                l_row.append(hash_proy[field])
+                valor = hash_proy[field]
             else:
-                l_row.append('')
+                valor = ''
+            
+            if col.find('IMPORTE') >= 0:
+                valor = formatea_numero(valor)
+            elif col == "Perceptor final (SI/NO)":
+                valor = formatea_perceptor_final(valor)
+            elif col == "ES_SUBCONTRATISTA (SI/NO)":
+                valor = formatea_subcontratista(valor)
+
+            l_row.append(valor)
    
         df.loc[len(df)] = l_row
     
     return df.sort_values(by=['CODIGO_ACTUACION (PROYECTO O SUBPROYECTO)'])
 
-def crea_tabla_IJ(hash_col2fields,hash_IJ2proyecto,hash_IJ2operaciones,hash_proyectos):
+def crea_tabla_IJ(hash_col2fields,hash_IJ2proyecto,hash_IJ2operaciones,hash_id2provisional,hash_proyectos):
     
     df = pd.DataFrame(columns=list(hash_col2fields.keys()))
 
@@ -371,6 +397,8 @@ def crea_tabla_IJ(hash_col2fields,hash_IJ2proyecto,hash_IJ2operaciones,hash_proy
 
         id_act = hash_IJ2proyecto[id_ij]
 
+        id_act_prov = hash_id2provisional[id_act]
+        
         hash_proy = hash_proyectos.get(id_act,{})
 
         l_row = []
@@ -378,13 +406,20 @@ def crea_tabla_IJ(hash_col2fields,hash_IJ2proyecto,hash_IJ2operaciones,hash_proy
         for col in hash_col2fields.keys():
 
             field = hash_col2fields[col]
-
-            if field in hash_oper:
-                l_row.append(hash_oper[field])
+            
+            if field == "Código Iniciativa":
+                valor = id_act_prov
+            elif field in hash_oper:
+                valor = hash_oper[field]
             elif field in hash_proy:
-                l_row.append(hash_proy[field])
+                valor = hash_proy[field]
             else:
-                l_row.append('')
+                valor = ''
+            
+            if col.find('IMPORTE') >= 0:
+                valor = formatea_numero(valor) 
+                        
+            l_row.append(valor)
    
         df.loc[len(df)] = l_row
     
@@ -440,7 +475,7 @@ def main(logger):
 
     hash_IJ2beneficiario,hash_IJ2proyecto = read_CoFFEE_beneficiarios(input_dir)
     
-    hash_proyectos = read_CoFFEE_proyectos(input_proyectos)
+    hash_id2provisional,hash_proyectos = read_CoFFEE_proyectos(input_proyectos)
 
     hash_IJ2operaciones = read_CoFFEE_operaciones(input_operaciones)
 
@@ -458,14 +493,14 @@ def main(logger):
         hash_IJ2proyecto_flat.update(hash_IJ2proyecto[cod_op])
 
     hash_df['TABLA MAESTRA']               = crea_tabla_maestra(get_cols_tabla_maestra(),hash_IJ2beneficiario_flat,hash_IJ2proyecto_flat,hash_proyectos)
-    hash_df['SUBVENCIONES']                = crea_tabla_IJ(get_cols_subvenciones(),hash_IJ2proyecto['Subvención'],hash_IJ2operaciones,hash_proyectos)
-    hash_df['BENEFICIARIOS_SUBVENCIONES']  = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_subvenciones(),hash_IJ2beneficiario['Subvención'],hash_IJ2proyecto['Subvención'],hash_proyectos,BDNS=hash_BDNS)
-    hash_df['CONTRATOS']                   = crea_tabla_IJ(get_cols_contratos(),hash_IJ2proyecto['Contrato'],hash_IJ2operaciones,hash_proyectos)
-    hash_df['BENEFICIARIOS_CONTRATOS']     = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_contratos(),hash_IJ2beneficiario['Contrato'],hash_IJ2proyecto['Contrato'],hash_proyectos)
-    hash_df['CONVENIOS']                   = crea_tabla_IJ(get_cols_convenios(),hash_IJ2proyecto['Convenio'],hash_IJ2operaciones,hash_proyectos)
-    hash_df['BENEFICIARIOS_CONVENIOS']     = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_convenios(),hash_IJ2beneficiario['Convenio'],hash_IJ2proyecto['Convenio'],hash_proyectos)
-    hash_df['ENCARGOS']                    = crea_tabla_IJ(get_cols_encargo(),hash_IJ2proyecto['Encargo a medio propio'],hash_IJ2operaciones,hash_proyectos)
-    hash_df['BENEFICIARIOS_ENCARGOS']      = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_encargo(),hash_IJ2beneficiario['Encargo a medio propio'],hash_IJ2proyecto['Encargo a medio propio'],hash_proyectos)
+    hash_df['SUBVENCIONES']                = crea_tabla_IJ(get_cols_subvenciones(),hash_IJ2proyecto['Subvención'],hash_IJ2operaciones,hash_id2provisional,hash_proyectos)
+    hash_df['BENEFICIARIOS_SUBVENCIONES']  = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_subvenciones(),hash_IJ2beneficiario['Subvención'],hash_IJ2proyecto['Subvención'],hash_id2provisional,hash_proyectos,BDNS=hash_BDNS)
+    hash_df['CONTRATOS']                   = crea_tabla_IJ(get_cols_contratos(),hash_IJ2proyecto['Contrato'],hash_IJ2operaciones,hash_id2provisional,hash_proyectos)
+    hash_df['BENEFICIARIOS_CONTRATOS']     = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_contratos(),hash_IJ2beneficiario['Contrato'],hash_IJ2proyecto['Contrato'],hash_id2provisional,hash_proyectos)
+    hash_df['CONVENIOS']                   = crea_tabla_IJ(get_cols_convenios(),hash_IJ2proyecto['Convenio'],hash_IJ2operaciones,hash_id2provisional,hash_proyectos)
+    hash_df['BENEFICIARIOS_CONVENIOS']     = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_convenios(),hash_IJ2beneficiario['Convenio'],hash_IJ2proyecto['Convenio'],hash_id2provisional,hash_proyectos)
+    hash_df['ENCARGOS']                    = crea_tabla_IJ(get_cols_encargo(),hash_IJ2proyecto['Encargo a medio propio'],hash_IJ2operaciones,hash_id2provisional,hash_proyectos)
+    hash_df['BENEFICIARIOS_ENCARGOS']      = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_encargo(),hash_IJ2beneficiario['Encargo a medio propio'],hash_IJ2proyecto['Encargo a medio propio'],hash_id2provisional,hash_proyectos)
     #hash_df['OTROS'] = crea_tabla_IJ(get_cols_encargo(),hash_IJ2proyecto['Otros – Especificar'],hash_IJ2operaciones,hash_proyectos)
     #hash_df['BENEFICIARIOS_OTROS']      = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_encargo(),hash_IJ2beneficiario['Otros – Especificar'],hash_IJ2proyecto['Otros – Especificar'],hash_proyectos)
     
