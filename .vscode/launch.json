@@ -12,7 +12,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/CoFEE2SIGEFE.py",
             "console": "integratedTerminal",
-            "args": ["-i","C:\\Users\\angela.delpozo\\beneficiarios_prueba\\destinatarios","--proyectos",r"C:\\Users\\angela.delpozo\\beneficiarios_prueba\\Desembolsos - Listado Total - Relación de Proyectos, Subproyectos, Subproyectos Instrumentales y Actuaciones.xlsx","--operaciones","C:\\Users\\angela.delpozo\\beneficiarios_prueba\\Desembolsos - IJOperaciones.xlsx","-o","C:\\Users\\angela.delpozo\\beneficiarios_prueba\\salida.xlsx"]
+            "args": ["-i","C:\\Users\\angela.delpozo\\beneficiarios_prueba\\destinatarios","--proyectos",r"C:\\Users\\angela.delpozo\\beneficiarios_prueba\\Desembolsos - Listado Total - Relación de Proyectos, Subproyectos, Subproyectos Instrumentales y Actuaciones.xlsx","--operaciones","C:\\Users\\angela.delpozo\\beneficiarios_prueba\\Desembolsos - IJOperaciones.xlsx","-o","C:\\Users\\angela.delpozo\\beneficiarios_prueba\\listado_beneficiarios_251103.xlsx"]
         },
         {
             "name": "Python Debugger: Current File with Arguments",
