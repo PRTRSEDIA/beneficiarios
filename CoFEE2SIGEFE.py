@@ -595,7 +595,7 @@ def crea_tabla_maestra_UTPRTR(l_id_ij_target,hash_IJ2beneficiarios,hash_IJ2opera
 
         df.loc[len(df)] = l_row_final
     
-    return df
+    return df.sort_values(by=['SUMA TOTAL'])
 
 def crea_tabla_beneficiarios_IJ(hash_col2fields,l_id_ij_target,hash_IJ2beneficiarios,hash_id2provisional,hash_proyectos,**kwargs):
 
@@ -709,13 +709,15 @@ def obtiene_BDNS(hash_IJ2operaciones):
 def obtiene_lista_ij(l_hash_beneficiarios):
 
     hash_id_ij_target = {}
-    hash_nif_target   = {}
 
+    num_ben = 0
+    
     for elem_benf in l_hash_beneficiarios:
         for id_ij in elem_benf.keys():
             hash_id_ij_target[id_ij] = True
+            num_ben += len(elem_benf[id_ij])
 
-    return list(hash_id_ij_target.keys())
+    return list(hash_id_ij_target.keys()),num_ben
 
 #######################################################
 
@@ -789,9 +791,12 @@ def main(logger):
     ### Selecciona beneficiarios
     logger.info("Seleccionando lista de beneficiarios de interés")
 
-    l_id_ij_target = obtiene_lista_ij([hash_IJ2beneficiarios.get('Subvención',{}),hash_IJ2beneficiarios.get('Contrato',{}),hash_IJ2beneficiarios.get('Convenio',{}),hash_IJ2beneficiarios.get('Encargo a medio propio',{}),hash_IJ2beneficiarios_AD])
+    l_id_ij_target, num_tot_ben = obtiene_lista_ij([hash_IJ2beneficiarios.get('Subvención',{}),hash_IJ2beneficiarios.get('Contrato',{}),hash_IJ2beneficiarios.get('Convenio',{}),hash_IJ2beneficiarios.get('Encargo a medio propio',{}),hash_IJ2beneficiarios_AD])
 
     logger.info("Seleccionada la lista")
+
+    logger.info("Número total de IJ: %d" % (len(l_id_ij_target)))
+    logger.info("Número total de Beneficiarios: %d" % (num_tot_ben))
 
     ### Genera las tablas y los asigna a los nombres de las pestañas
     logger.info("Creando las tablas para escribir en el excel")
