@@ -25,6 +25,8 @@ import logging
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 
+PROFUNDIDAD_MAX=4
+
 #######################################################
 
 def read_CoFFEE_beneficiarios(input_dir,hash_id2provisional,l_proyectos_target):
@@ -60,8 +62,8 @@ def read_CoFFEE_beneficiarios(input_dir,hash_id2provisional,l_proyectos_target):
             tipo_op    = hash_benf['Tipo Operación']
             cod_ij     = hash_benf['Código único IJ']
             cod_coffee = hash_benf['Código Actuación']
-            cod_coffee_prov = hash_id2provisional.get(cod_coffee,cod_coffee)
-
+            cod_coffee_prov,_ = hash_id2provisional.get(cod_coffee,(cod_coffee+'.REV',None))
+            
             if filtra_proyecto(cod_coffee_prov,l_proyectos_target):
                 continue
 
@@ -102,11 +104,13 @@ def read_CoFFEE_proyectos(input_file,l_proyectos_target):
 
         cod_coffee      = hash_row['Código Iniciativa']
         cod_coffee_prov = hash_row['Código provisional iniciativa']
-        
+                
         if filtra_proyecto(cod_coffee_prov,l_proyectos_target):
             continue
 
-        hash_id2provisional[cod_coffee] = cod_coffee_prov
+        prof = int(hash_row['Profundidad'])
+
+        hash_id2provisional[cod_coffee] = (cod_coffee_prov,prof)
         hash_proyectos[cod_coffee] = hash_row
 
     return hash_id2provisional,hash_proyectos
@@ -130,8 +134,8 @@ def read_CoFFEE_IJ(input_file,hash_id2provisional,l_proyectos_target):
 
         cod_ij     = hash_row['Código único IJ/Operaciones']
         cod_coffee = hash_row['Código iniciativa']
-        cod_coffee_prov = hash_id2provisional.get(cod_coffee,cod_coffee)
-
+        cod_coffee_prov,_ = hash_id2provisional.get(cod_coffee,(cod_coffee+'.REV',0))
+        
         if filtra_proyecto(cod_coffee_prov,l_proyectos_target):
             continue
 
@@ -163,7 +167,7 @@ def obtiene_aportaciones_dinerarias(hash_IJ2beneficiarios,hash_IJ2operaciones):
 
         for hash_benf in l_hash_benf:
 
-            if hash_benf['Profundidad iniciativa'] != '3': ## sólo se selecciona nivel proyectos
+            if int(hash_benf['Profundidad iniciativa']) > 3: ## sólo se selecciona nivel proyectos
                 continue
 
             hash_id_ij[id_ij] = True
@@ -326,7 +330,7 @@ def get_cols_beneficiarios_contratos():
 
     hash_col2fields = OrderedDict([('CODIGO_ACTUACION (PROYECTO O SUBPROYECTO)','Código Iniciativa'),
     ('NOMBRE ACTUACION','Denominación Iniciativa'),
-    ('COD_CONTRATO','Código IJ/Operaciones'),
+    ('COD_CONTRATO','Código contrato'),
     ('NIF','NIF Destinatario normalizado'),
     ('BENEFICIARIO','Nombre Destinatario'),
     ('ES_SUBCONTRATISTA (SI/NO)','Rol Destinatario'), # requiere regla
@@ -472,6 +476,11 @@ def crea_tabla_maestra(l_ij_target,hash_IJ2beneficiarios,hash_IJ2operaciones,has
 
         for hash_benf in l_hash_benf:
 
+            profundidad = int(hash_benf['Profundidad iniciativa'])
+
+            if profundidad > PROFUNDIDAD_MAX:
+                continue
+
             nif = hash_benf['NIF Destinatario normalizado']
 
             if nif in hash_NIF:
@@ -496,6 +505,7 @@ def crea_tabla_maestra_UTPRTR(l_id_ij_target,hash_IJ2beneficiarios,hash_IJ2opera
     hash_importe_beneficiario_final = {}
     hash_beneficiario               = {}
     hash_beneficiario2ij            = {}
+    hash_beneficiario2prof          = {}
     hash_ij                         = {}
 
     hash_IJ2beneficiarios_flat = {}
@@ -529,8 +539,10 @@ def crea_tabla_maestra_UTPRTR(l_id_ij_target,hash_IJ2beneficiarios,hash_IJ2opera
             importe   = float(hash_benf['Importe total Destinatarios'])
             provincia = hash_proyectos.get(id_coffee,{'Provincia':''})['Provincia']
             ccaa      = hash_proyectos.get(id_coffee,{'CCAA':''})['CCAA']
+            prof      = int(hash_benf['Profundidad iniciativa'])
 
             hash_beneficiario2ij.setdefault(nif,[]).append(id_ij)
+            hash_beneficiario2prof.setdefault(nif,[]).append(prof)
 
             hash_beneficiario[nif] = [nif,nombre,provincia,ccaa,observ]
 
@@ -562,7 +574,18 @@ def crea_tabla_maestra_UTPRTR(l_id_ij_target,hash_IJ2beneficiarios,hash_IJ2opera
     df = pd.DataFrame(columns=l_cols)
 
     for nif in sorted(hash_beneficiario.keys()):
+
+        is_proy = False
+
+        l_prof = hash_beneficiario2prof[nif]
+
+        for prof in l_prof:
+            if prof <= PROFUNDIDAD_MAX:
+                is_proy = True
         
+        if not is_proy:
+            continue
+
         l_row = hash_beneficiario[nif]
 
         l_row_final = l_row[:-1]
@@ -616,8 +639,11 @@ def crea_tabla_beneficiarios_IJ(hash_col2fields,l_id_ij_target,hash_IJ2beneficia
         for hash_benf in l_hash_benf:
         
             id_coffee = hash_benf['Código Actuación']
-            id_coffee_prov = hash_id2provisional.get(id_coffee,id_coffee+'.REV')
+            id_coffee_prov,prof = hash_id2provisional.get(id_coffee,(id_coffee+'.REV',None))
 
+            if prof > PROFUNDIDAD_MAX:
+                continue
+            
             hash_proy = hash_proyectos.get(id_coffee,{})
             
             l_row = []
@@ -663,8 +689,11 @@ def crea_tabla_IJ(hash_col2fields,l_id_ij_target,hash_IJ2operaciones,hash_id2pro
 
         hash_oper = hash_IJ2operaciones[id_ij]
 
-        cod_coffee      = hash_oper['Código iniciativa']
-        cod_coffee_prov = hash_id2provisional.get(cod_coffee,cod_coffee+'.REV')
+        cod_coffee           = hash_oper['Código iniciativa']
+        cod_coffee_prov,prof = hash_id2provisional.get(cod_coffee,(cod_coffee+'.REV',None))
+
+        if prof > PROFUNDIDAD_MAX:
+            continue
         
         hash_proy = hash_proyectos.get(cod_coffee,{})
 
@@ -713,8 +742,11 @@ def obtiene_lista_ij(l_hash_beneficiarios):
     num_ben = 0
     
     for elem_benf in l_hash_beneficiarios:
+        
         for id_ij in elem_benf.keys():
+            
             hash_id_ij_target[id_ij] = True
+            
             num_ben += len(elem_benf[id_ij])
 
     return list(hash_id_ij_target.keys()),num_ben
