@@ -444,7 +444,7 @@ def get_cols_beneficiarios_aportaciones_dinerarias():
 
 #######################################################
 
-def crea_tabla_maestra(l_ij_target,hash_IJ2beneficiarios,hash_IJ2operaciones,hash_proyectos):
+def crea_tabla_maestra(l_ij_target,hash_IJ2beneficiarios,hash_IJ2operaciones,hash_proyectos,hash_nif2info,hash_name2info):
 
     l_cols = ['NIF','BENEFICIARIO','PROVINCIA','CCAA','OBSERVACIÓN']
 
@@ -494,12 +494,17 @@ def crea_tabla_maestra(l_ij_target,hash_IJ2beneficiarios,hash_IJ2operaciones,has
 
             provincia = hash_proyectos.get(id_coffee,{'Provincia':''})['Provincia']
             ccaa      = hash_proyectos.get(id_coffee,{'CCAA':''})['CCAA']
+
+            if provincia == "" and ccaa == "":
+                (provincia,ccaa) = hash_nif2info.get(nif,("",""))
+            if provincia == "" and ccaa == "":
+                (provincia,ccaa) = hash_name2info.get(nombre.lower(),("",""))
         
             df.loc[len(df)] = [nif,nombre,provincia,ccaa,observ]
 
     return df.sort_values(by=['NIF'])
 
-def crea_tabla_maestra_UTPRTR(l_id_ij_target,hash_IJ2beneficiarios,hash_IJ2operaciones,hash_proyectos):
+def crea_tabla_maestra_UTPRTR(l_id_ij_target,hash_IJ2beneficiarios,hash_IJ2operaciones,hash_proyectos,hash_nif2info,hash_name2info):
 
     hash_importe_beneficiario       = {}
     hash_importe_beneficiario_final = {}
@@ -537,9 +542,16 @@ def crea_tabla_maestra_UTPRTR(l_id_ij_target,hash_IJ2beneficiarios,hash_IJ2opera
             nif       = hash_benf['NIF Destinatario normalizado']
             nombre    = hash_benf['Nombre Destinatario']
             importe   = float(hash_benf['Importe total Destinatarios'])
+            
             provincia = hash_proyectos.get(id_coffee,{'Provincia':''})['Provincia']
             ccaa      = hash_proyectos.get(id_coffee,{'CCAA':''})['CCAA']
-            prof      = int(hash_benf['Profundidad iniciativa'])
+
+            if provincia == "" and ccaa == "":
+                (provincia,ccaa) = hash_nif2info.get(nif,("",""))
+            if provincia == "" and ccaa == "":
+                (provincia,ccaa) = hash_name2info.get(nombre.lower(),("",""))
+
+            prof = int(hash_benf['Profundidad iniciativa'])
 
             hash_beneficiario2ij.setdefault(nif,[]).append(id_ij)
             hash_beneficiario2prof.setdefault(nif,[]).append(prof)
@@ -620,7 +632,7 @@ def crea_tabla_maestra_UTPRTR(l_id_ij_target,hash_IJ2beneficiarios,hash_IJ2opera
     
     return df.sort_values(by=['SUMA TOTAL'])
 
-def crea_tabla_beneficiarios_IJ(hash_col2fields,l_id_ij_target,hash_IJ2beneficiarios,hash_id2provisional,hash_proyectos,**kwargs):
+def crea_tabla_beneficiarios_IJ(hash_col2fields,l_id_ij_target,hash_IJ2beneficiarios,hash_id2provisional,hash_proyectos,hash_nif2info,hash_name2info,**kwargs):
 
     hash_bdns = {}
 
@@ -648,6 +660,9 @@ def crea_tabla_beneficiarios_IJ(hash_col2fields,l_id_ij_target,hash_IJ2beneficia
             
             l_row = []
 
+            nif    = hash_benf["NIF Destinatario normalizado"]
+            nombre = hash_benf["Nombre Destinatario"]    
+                
             for col in hash_col2fields.keys():
 
                 if col == "CODIGO_BDNS" and hash_bdns != {}:
@@ -669,6 +684,16 @@ def crea_tabla_beneficiarios_IJ(hash_col2fields,l_id_ij_target,hash_IJ2beneficia
                     valor = formatea_numero(valor)
                 elif col == "Perceptor final (SI/NO)":
                     valor = formatea_perceptor_final(valor)
+                elif col == "PROVINCIA":
+                    if valor == "":
+                        (provincia,_) = hash_nif2info.get(nif,("",""))
+                    if valor == "":
+                        (provincia,_) = hash_name2info.get(nombre.lower(),("",""))
+                elif col == "CCAA":
+                    if valor == "":
+                        (_,ccaa) = hash_nif2info.get(nif,("",""))
+                    if valor == "":
+                        (_,ccaa) = hash_name2info.get(nombre.lower(),("",""))
                 elif col == "ES_SUBCONTRATISTA (SI/NO)":
                     valor = formatea_subcontratista(valor)
 
@@ -753,6 +778,48 @@ def obtiene_lista_ij(l_hash_beneficiarios):
 
 #######################################################
 
+def read_beneficiarios(input_ben):
+
+    #sheets_dict =  pd.read_excel(input_ben,sheet_name=None)
+    #for sheet_name, df in sheets_dict.items():
+    
+    l_col_t = ['NIF','CCAA','Provincia','Razón Social']
+    
+    hash_nif2info = {}
+    hash_name2info = {}
+
+    xls = pd.ExcelFile(input_ben)
+
+    for hoja in xls.sheet_names:
+
+        if hoja == "ÍNDICE" or hoja == "TABLA RESUMEN":
+            continue
+
+        if hoja == "DATOS":
+            continue
+
+        print(hoja)
+
+        df = pd.read_excel(input_ben, sheet_name=hoja,usecols=l_col_t)
+    
+        for i,row in df.iterrows():
+
+            l_col = df.columns
+            l_row = [elem if elem != 'nan' else '' for elem in map(str,list(row))]
+
+            hash_row = dict(zip(l_col,l_row))
+
+            try:
+                hash_nif2info[hash_row['NIF']] = (hash_row['Provincia'],hash_row['CCAA'].split('-')[1].strip())
+                hash_name2info[hash_row['Razón Social'].lower()] = (hash_row['Provincia'],hash_row['CCAA'].split('-')[1].strip())
+            except:
+                hash_nif2info[hash_row['NIF']] = (hash_row['Provincia'],hash_row['CCAA'])
+                hash_name2info[hash_row['Razón Social'].lower()] = (hash_row['Provincia'],hash_row['CCAA'])
+            
+    return hash_nif2info,hash_name2info
+
+#######################################################
+
 def main(logger):
     
     parser = argparse.ArgumentParser(description='Formateo de la información de beneficiarios para la carga en SIGEFE')
@@ -761,6 +828,7 @@ def main(logger):
     parser.add_argument('--proyectos', type=str, default=None, help='Ruta y nombre del fichero de entrada .xlsx con la relación de proyectos')
     parser.add_argument('--operaciones', type=str, default=None, help='Ruta y nombre del fichero de entrada .xlsx con la relación de operaciones')
     parser.add_argument('--pt', type=str, default=[],action='append',help='Proyectos diana. La salida se restringe al proyecto específico configurado')
+    parser.add_argument('--ben','-b', type=str, default=None,help='Ruta y nombre del fichero .xlsx auxiliar con una relación de beneficiaros')
     parser.add_argument('--output', '-o', type=str, default=None, help='Ruta y nombre del fichero de salida .xlsx con la tabla agregada')
         
     args = parser.parse_args()
@@ -790,7 +858,22 @@ def main(logger):
     ### Lista de proyectos 'target' para acotar la salida
     ### La lista puede estar vacía. Eso significa que se incluyen todos los proyectos
     l_proyectos_target = args.pt
-       
+
+    ### Lista auxiliar de beneficiarios
+    input_ben = args.ben
+
+    hash_nif2info = {}
+    hash_name2info = {}
+
+    if input_ben != None:
+        
+        if not os.path.exists(input_ben):
+            raise IOError('El xlsx de entrada con la información auxiliar de beneficiarios, no existe: %s' % (input_ben))
+        
+        logger.info("Leyendo excel externo de beneficiarios")
+
+        hash_nif2info,hash_name2info = read_beneficiarios(input_ben)
+
     logger.info("Leyendo tablas de entrada de CoFFEE")
 
     # Lee y parsea la tabla con la información de proyectos y subproyectos 'Desembolsos - Listado Total - Relación de Proyectos, Subproyectos, Subproyectos Instrumentales y Actuaciones.xlsx'
@@ -835,23 +918,23 @@ def main(logger):
 
     hash_df = {}
     
-    hash_df['TABLA MAESTRA']               = crea_tabla_maestra(l_id_ij_target,hash_IJ2beneficiarios,hash_IJ2operaciones,hash_proyectos)
-    hash_df['TABLA MAESTRA UTPRTR']        = crea_tabla_maestra_UTPRTR(l_id_ij_target,hash_IJ2beneficiarios,hash_IJ2operaciones,hash_proyectos)
+    hash_df['TABLA MAESTRA']               = crea_tabla_maestra(l_id_ij_target,hash_IJ2beneficiarios,hash_IJ2operaciones,hash_proyectos,hash_nif2info,hash_name2info)
+    hash_df['TABLA MAESTRA UTPRTR']        = crea_tabla_maestra_UTPRTR(l_id_ij_target,hash_IJ2beneficiarios,hash_IJ2operaciones,hash_proyectos,hash_nif2info,hash_name2info)
          
     hash_df['SUBVENCIONES']                = crea_tabla_IJ(get_cols_subvenciones(),l_id_ij_target,hash_IJ2operaciones.get('Subvención',{}),hash_id2provisional,hash_proyectos)
-    hash_df['BENEFICIARIOS_SUBVENCIONES']  = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_subvenciones(),l_id_ij_target,hash_IJ2beneficiarios.get('Subvención',{}),hash_id2provisional,hash_proyectos,BDNS=hash_BDNS)
+    hash_df['BENEFICIARIOS_SUBVENCIONES']  = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_subvenciones(),l_id_ij_target,hash_IJ2beneficiarios.get('Subvención',{}),hash_id2provisional,hash_proyectos,hash_nif2info,hash_name2info,BDNS=hash_BDNS)
         
     hash_df['CONTRATOS']                   = crea_tabla_IJ(get_cols_contratos(),l_id_ij_target,hash_IJ2operaciones.get('Contrato',{}),hash_id2provisional,hash_proyectos)
-    hash_df['BENEFICIARIOS_CONTRATOS']     = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_contratos(),l_id_ij_target,hash_IJ2beneficiarios.get('Contrato',{}),hash_id2provisional,hash_proyectos)
+    hash_df['BENEFICIARIOS_CONTRATOS']     = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_contratos(),l_id_ij_target,hash_IJ2beneficiarios.get('Contrato',{}),hash_id2provisional,hash_proyectos,hash_nif2info,hash_name2info)
         
     hash_df['CONVENIOS']                   = crea_tabla_IJ(get_cols_convenios(),l_id_ij_target,hash_IJ2operaciones.get('Convenio',{}),hash_id2provisional,hash_proyectos)
-    hash_df['BENEFICIARIOS_CONVENIOS']     = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_convenios(),l_id_ij_target,hash_IJ2beneficiarios.get('Convenio',{}),hash_id2provisional,hash_proyectos)
+    hash_df['BENEFICIARIOS_CONVENIOS']     = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_convenios(),l_id_ij_target,hash_IJ2beneficiarios.get('Convenio',{}),hash_id2provisional,hash_proyectos,hash_nif2info,hash_name2info)
         
     hash_df['ENCARGOS']                    = crea_tabla_IJ(get_cols_encargo(),l_id_ij_target,hash_IJ2operaciones.get('Encargo a medio propio',{}),hash_id2provisional,hash_proyectos)
-    hash_df['BENEFICIARIOS_ENCARGOS']      = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_encargo(),l_id_ij_target,hash_IJ2beneficiarios.get('Encargo a medio propio',{}),hash_id2provisional,hash_proyectos)
+    hash_df['BENEFICIARIOS_ENCARGOS']      = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_encargo(),l_id_ij_target,hash_IJ2beneficiarios.get('Encargo a medio propio',{}),hash_id2provisional,hash_proyectos,hash_nif2info,hash_name2info)
     
     hash_df['APORTACIONES_DIN']               = crea_tabla_IJ(get_cols_aportaciones_dinerarias(),l_id_ij_target,hash_IJ2operaciones_AD,hash_id2provisional,hash_proyectos)
-    hash_df['BENEFICIARIOS_APORTACIONES_DIN'] = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_aportaciones_dinerarias(),l_id_ij_target,hash_IJ2beneficiarios_AD,hash_id2provisional,hash_proyectos)
+    hash_df['BENEFICIARIOS_APORTACIONES_DIN'] = crea_tabla_beneficiarios_IJ(get_cols_beneficiarios_aportaciones_dinerarias(),l_id_ij_target,hash_IJ2beneficiarios_AD,hash_id2provisional,hash_proyectos,hash_nif2info,hash_name2info)
 
     logger.info("Tablas creadas")
     
